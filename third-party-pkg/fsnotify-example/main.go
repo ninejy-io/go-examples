@@ -54,6 +54,15 @@ func StartWatch(stopCh <-chan struct{}) error {
 					if err != nil {
 						fmt.Println("delete event failed", err)
 					}
+				} else if event.Op&fsnotify.Write == fsnotify.Write {
+					// TODO
+					fmt.Println("fsnotify.Write")
+				} else if event.Op&fsnotify.Chmod == fsnotify.Chmod {
+					// TODO
+					fmt.Println("fsnotify.Chmod")
+				} else if event.Op&fsnotify.Rename == fsnotify.Rename {
+					// TODO
+					fmt.Println("fsnotify.Rename")
 				}
 			case err = <-fsWatcher.Errors:
 				fmt.Println("error:", err)
