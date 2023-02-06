@@ -1,0 +1,2 @@
+{"animal":"dog","file":"E:/study/golang/go-examples/third-party-pkg/logrus-example/main.go:12","func":"main.main","level":"info","msg":"this is a test log","time":"2023-02-03T17:43:58+08:00"}
+{"animal":"dog","file":"E:/study/golang/go-examples/third-party-pkg/logrus-example/main.go:10","func":"main.main","level":"info","msg":"this is a test log","time":"2023-02-03T18:12:45+08:00"}
