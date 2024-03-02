@@ -1,3 +1,6 @@
 go 1.18
 
-use ./grpc-example
+use (
+	./grpc-example
+	./k8s-api
+)
