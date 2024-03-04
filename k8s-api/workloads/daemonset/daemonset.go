@@ -7,6 +7,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	v1 "k8s.io/client-go/kubernetes/typed/apps/v1"
+	"k8s.io/client-go/util/retry"
 )
 
 type DaemonSetClient struct {
@@ -21,9 +22,27 @@ func NewDaemonsetClient(clientset *kubernetes.Clientset, namespace string) *Daem
 	}
 }
 
-func (d *DaemonSetClient) Create(name string) {}
+func (d *DaemonSetClient) Create(name string) (*appsv1.DaemonSet, error) {
+	ds := &appsv1.DaemonSet{}
 
-func (d *DaemonSetClient) Update(name string) {}
+	return d.client.Create(context.TODO(), ds, metav1.CreateOptions{})
+}
+
+func (d *DaemonSetClient) Update(name string) error {
+	retryErr := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		ds, getErr := d.client.Get(context.TODO(), name, metav1.GetOptions{})
+		if getErr != nil {
+			return getErr
+		}
+
+		// ds.Spec.Selector
+
+		_, updateErr := d.client.Update(context.TODO(), ds, metav1.UpdateOptions{})
+		return updateErr
+	})
+
+	return retryErr
+}
 
 func (d *DaemonSetClient) Delete(name string) error {
 	return d.client.Delete(context.TODO(), name, metav1.DeleteOptions{})

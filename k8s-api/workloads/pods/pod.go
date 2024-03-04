@@ -7,6 +7,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	v1 "k8s.io/client-go/kubernetes/typed/core/v1"
+	"k8s.io/client-go/util/retry"
 )
 
 type PodClient struct {
@@ -21,9 +22,27 @@ func NewPodClient(clientset *kubernetes.Clientset, namespace string) *PodClient 
 	}
 }
 
-func (p *PodClient) Create(name string) {}
+func (p *PodClient) Create(name string) (*corev1.Pod, error) {
+	pod := &corev1.Pod{}
 
-func (p *PodClient) Update(name string) {}
+	return p.client.Create(context.TODO(), pod, metav1.CreateOptions{})
+}
+
+func (p *PodClient) Update(name string) error {
+	retryErr := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		pod, getErr := p.client.Get(context.TODO(), name, metav1.GetOptions{})
+		if getErr != nil {
+			return getErr
+		}
+
+		// pod.Spec.Containers
+
+		_, updateErr := p.client.Update(context.TODO(), pod, metav1.UpdateOptions{})
+		return updateErr
+	})
+
+	return retryErr
+}
 
 func (p *PodClient) Delete(name string) error {
 	return p.client.Delete(context.TODO(), name, metav1.DeleteOptions{})

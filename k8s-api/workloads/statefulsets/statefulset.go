@@ -7,6 +7,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	v1 "k8s.io/client-go/kubernetes/typed/apps/v1"
+	"k8s.io/client-go/util/retry"
 )
 
 type StatefulSetClient struct {
@@ -21,9 +22,27 @@ func NewStatefulSetClient(clientset *kubernetes.Clientset, namespace string) *St
 	}
 }
 
-func (s *StatefulSetClient) Create(name string) {}
+func (s *StatefulSetClient) Create(name string) (*appsv1.StatefulSet, error) {
+	ss := &appsv1.StatefulSet{}
 
-func (s *StatefulSetClient) Update(name string) {}
+	return s.client.Create(context.TODO(), ss, metav1.CreateOptions{})
+}
+
+func (s *StatefulSetClient) Update(name string) error {
+	retryErr := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		ss, getErr := s.client.Get(context.TODO(), name, metav1.GetOptions{})
+		if getErr != nil {
+			return getErr
+		}
+
+		// ss.Spec.Replicas
+
+		_, updateErr := s.client.Update(context.TODO(), ss, metav1.UpdateOptions{})
+		return updateErr
+	})
+
+	return retryErr
+}
 
 func (s *StatefulSetClient) Delete(name string) error {
 	return s.client.Delete(context.TODO(), name, metav1.DeleteOptions{})

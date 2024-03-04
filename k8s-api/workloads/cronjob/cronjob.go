@@ -7,6 +7,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	v1 "k8s.io/client-go/kubernetes/typed/batch/v1"
+	"k8s.io/client-go/util/retry"
 )
 
 type CronjobClient struct {
@@ -21,9 +22,27 @@ func NewCronjobClient(clientset *kubernetes.Clientset, namespace string) *Cronjo
 	}
 }
 
-func (c *CronjobClient) Create(name string) {}
+func (c *CronjobClient) Create(name string) (*batchv1.CronJob, error) {
+	cj := &batchv1.CronJob{}
 
-func (c *CronjobClient) Update(name string) {}
+	return c.client.Create(context.TODO(), cj, metav1.CreateOptions{})
+}
+
+func (c *CronjobClient) Update(name string) error {
+	retryErr := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		cj, getErr := c.client.Get(context.TODO(), name, metav1.GetOptions{})
+		if getErr != nil {
+			return getErr
+		}
+
+		// cj.Spec.Schedule
+
+		_, updateErr := c.client.Update(context.TODO(), cj, metav1.UpdateOptions{})
+		return updateErr
+	})
+
+	return retryErr
+}
 
 func (c *CronjobClient) Delete(name string) error {
 	return c.client.Delete(context.TODO(), name, metav1.DeleteOptions{})

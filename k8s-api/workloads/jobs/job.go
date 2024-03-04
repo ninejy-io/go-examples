@@ -7,6 +7,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	v1 "k8s.io/client-go/kubernetes/typed/batch/v1"
+	"k8s.io/client-go/util/retry"
 )
 
 type JobClient struct {
@@ -21,9 +22,27 @@ func NewJobClient(clientset *kubernetes.Clientset, namespace string) *JobClient 
 	}
 }
 
-func (j *JobClient) Create(name string) {}
+func (j *JobClient) Create(name string) (*batchv1.Job, error) {
+	job := &batchv1.Job{}
 
-func (j *JobClient) Update(name string) {}
+	return j.client.Create(context.TODO(), job, metav1.CreateOptions{})
+}
+
+func (j *JobClient) Update(name string) error {
+	retryErr := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		job, getErr := j.client.Get(context.TODO(), name, metav1.GetOptions{})
+		if getErr != nil {
+			return getErr
+		}
+
+		// job.Spec.Parallelism
+
+		_, updateErr := j.client.Update(context.TODO(), job, metav1.UpdateOptions{})
+		return updateErr
+	})
+
+	return retryErr
+}
 
 func (j *JobClient) Delete(name string) error {
 	return j.client.Delete(context.TODO(), name, metav1.DeleteOptions{})

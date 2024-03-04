@@ -7,6 +7,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	v1 "k8s.io/client-go/kubernetes/typed/core/v1"
+	"k8s.io/client-go/util/retry"
 )
 
 type PersistentVolumeClaimClient struct {
@@ -21,9 +22,27 @@ func NewPersistentVolumeClaimClient(clientset *kubernetes.Clientset, namespace s
 	}
 }
 
-func (p *PersistentVolumeClaimClient) Create(name string) {}
+func (p *PersistentVolumeClaimClient) Create(name string) (*corev1.PersistentVolumeClaim, error) {
+	pvc := &corev1.PersistentVolumeClaim{}
 
-func (p *PersistentVolumeClaimClient) Update(name string) {}
+	return p.client.Create(context.TODO(), pvc, metav1.CreateOptions{})
+}
+
+func (p *PersistentVolumeClaimClient) Update(name string) error {
+	retryErr := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		pvc, getErr := p.client.Get(context.TODO(), name, metav1.GetOptions{})
+		if getErr != nil {
+			return getErr
+		}
+
+		// pvc.Spec.Resources
+
+		_, updateErr := p.client.Update(context.TODO(), pvc, metav1.UpdateOptions{})
+		return updateErr
+	})
+
+	return retryErr
+}
 
 func (p *PersistentVolumeClaimClient) Delete(name string) error {
 	return p.client.Delete(context.TODO(), name, metav1.DeleteOptions{})

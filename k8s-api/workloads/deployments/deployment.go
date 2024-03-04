@@ -8,6 +8,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	v1 "k8s.io/client-go/kubernetes/typed/apps/v1"
+	"k8s.io/client-go/util/retry"
 )
 
 type DeploymentClient struct {
@@ -22,7 +23,7 @@ func NewDeploymentClient(clientset *kubernetes.Clientset, namespace string) *Dep
 	}
 }
 
-func (d *DeploymentClient) Create(name string, labels map[string]string, replicas int32, image string) {
+func (d *DeploymentClient) Create(name string, labels map[string]string, replicas int32, image string) (*appsv1.Deployment, error) {
 	var containers []corev1.Container
 	container := corev1.Container{
 		Name:  name,
@@ -82,10 +83,24 @@ func (d *DeploymentClient) Create(name string, labels map[string]string, replica
 		},
 	}
 
-	d.client.Create(context.TODO(), deployment, metav1.CreateOptions{})
+	return d.client.Create(context.TODO(), deployment, metav1.CreateOptions{})
 }
 
-func (d *DeploymentClient) Update(name string) {}
+func (d *DeploymentClient) Update(name string) error {
+	retryErr := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		deployment, getErr := d.client.Get(context.TODO(), name, metav1.GetOptions{})
+		if getErr != nil {
+			return getErr
+		}
+
+		// deployment.Spec.Replicas
+
+		_, updateErr := d.client.Update(context.TODO(), deployment, metav1.UpdateOptions{})
+		return updateErr
+	})
+
+	return retryErr
+}
 
 func (d *DeploymentClient) Delete(name string) error {
 	return d.client.Delete(context.TODO(), name, metav1.DeleteOptions{})
