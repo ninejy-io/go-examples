@@ -1,6 +1,7 @@
-go 1.21
+go 1.22.9
 
 use (
 	./grpc-example
 	./k8s-api
+	./third-party-pkg/email-example
 )
