@@ -4,4 +4,6 @@ use (
 	./grpc-example
 	./k8s-api
 	./third-party-pkg/email-example
+	./third-party-pkg/fsnotify-example
+	./third-party-pkg/logrus-example
 )
